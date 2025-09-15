@@ -24,7 +24,15 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [theme, setTheme] = useState('light'); // could be extended for dark mode if needed
+  const [theme, setTheme] = useState(() => {
+    // Initialize theme from localStorage or prefers-color-scheme
+    try {
+      const saved = localStorage.getItem('notes.theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch {}
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
+  });
 
   // Persist notes
   useEffect(() => {
@@ -39,6 +47,13 @@ export default function App() {
       setSelectedId(notes[0]?.id || null);
     }
   }, [notes, selectedId]);
+
+  // Persist theme and keep attribute in sync
+  useEffect(() => {
+    try {
+      localStorage.setItem('notes.theme', theme);
+    } catch {}
+  }, [theme]);
 
   const selectedNote = useMemo(
     () => notes.find(n => n.id === selectedId) || null,
@@ -89,12 +104,12 @@ export default function App() {
 
   // PUBLIC_INTERFACE
   const toggleTheme = () => {
-    setTheme(t => (t === 'light' ? 'light' : 'light')); // locked to light classic theme per guide; extend as needed
+    setTheme(t => (t === 'light' ? 'dark' : 'light'));
   };
 
   return (
     <div className="heritage-app" data-theme={theme}>
-      <Header onThemeToggle={toggleTheme} />
+      <Header onThemeToggle={toggleTheme} theme={theme} />
       <main className="layout">
         <Sidebar
           notes={filteredNotes}
@@ -123,10 +138,13 @@ export default function App() {
 
 /** Header */
 // PUBLIC_INTERFACE
-function Header({ onThemeToggle }) {
+function Header({ onThemeToggle, theme }) {
   /**
-   * Renders the top header with the app title. Theme toggle kept for extensibility.
+   * Renders the top header with the app title and theme toggle.
    */
+  const nextLabel = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+  const icon = theme === 'dark' ? '☀️' : '🌙';
+
   return (
     <header className="hb-header">
       <div className="hb-header__content">
@@ -137,7 +155,7 @@ function Header({ onThemeToggle }) {
         <div className="header-actions">
           <span className="header-accent" />
           <button className="btn ghost" onClick={onThemeToggle} aria-label="Toggle theme">
-            Classic
+            {icon} {nextLabel}
           </button>
         </div>
       </div>
